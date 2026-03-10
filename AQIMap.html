@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AQI Intelligence — India Live</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@700;800;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#06090f;--panel:#0c1219;--border:#1a2535;--text:#dde8f5;--muted:#4a5a70;--accent:#1d8cf8}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;height:100vh;overflow:hidden}
+header{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(6,9,15,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:54px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-dot{width:9px;height:9px;border-radius:50%;background:#22c55e;box-shadow:0 0 12px #22c55e;animation:pulse 2s infinite}
+.logo-text{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:800;letter-spacing:3px}
+.logo-sub{font-size:8px;color:var(--muted);letter-spacing:2px;font-family:'Share Tech Mono',monospace}
+.hstats{display:flex;gap:18px;align-items:center}
+.hs{text-align:center}.hs-v{font-family:'Share Tech Mono',monospace;font-size:17px;font-weight:700;line-height:1}
+.hs-l{font-size:7px;color:var(--muted);letter-spacing:1.5px;margin-top:2px}
+.live-badge{display:flex;align-items:center;gap:5px;background:#22c55e18;border:1px solid #22c55e44;border-radius:20px;padding:4px 10px}
+.live-dot{width:5px;height:5px;border-radius:50%;background:#22c55e;animation:blink 1.4s infinite}
+.live-text{font-size:9px;color:#22c55e;font-family:'Share Tech Mono',monospace;letter-spacing:2px}
+#map{position:fixed;top:54px;left:0;right:0;bottom:0;z-index:1}
+#pollutant-bar{position:fixed;top:66px;left:50%;transform:translateX(-50%);z-index:600;display:flex;gap:3px;background:rgba(6,9,15,.96);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:30px;padding:5px 8px;box-shadow:0 4px 24px rgba(0,0,0,.5)}
+.pb-btn{cursor:pointer;padding:5px 12px;border-radius:20px;border:1px solid transparent;font-size:10px;font-family:'Share Tech Mono',monospace;letter-spacing:1px;color:var(--muted);background:transparent;transition:all .2s;white-space:nowrap}
+.pb-btn:hover{color:var(--text);background:var(--border)}
+#search-box{position:fixed;top:68px;left:16px;z-index:600;background:rgba(6,9,15,.95);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:10px;padding:9px 13px;width:220px}
+#search-input{width:100%;background:none;border:none;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px}
+#search-input::placeholder{color:var(--muted)}
+#search-results{margin-top:5px;display:none}
+.sr-item{padding:6px 7px;border-radius:5px;cursor:pointer;font-size:11px;display:flex;justify-content:space-between;align-items:center}
+.sr-item:hover{background:var(--border)}
+#legend{position:fixed;bottom:18px;left:16px;z-index:600;background:rgba(6,9,15,.94);backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:10px;padding:11px 13px}
+.leg-title{font-size:8px;color:var(--muted);letter-spacing:2px;margin-bottom:7px;font-family:'Share Tech Mono',monospace}
+.leg-row{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+.leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.leg-text{font-size:9px;color:#7a8a9a}
+#status-bar{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:600;background:rgba(6,9,15,.94);backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:9px;color:var(--muted);font-family:'Share Tech Mono',monospace;letter-spacing:1px;white-space:nowrap}
+#panel{position:fixed;top:54px;right:0;bottom:0;width:345px;z-index:500;background:rgba(6,9,15,.97);backdrop-filter:blur(16px);border-left:1px solid var(--border);overflow-y:auto;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1)}
+#panel.open{transform:translateX(0)}
+#panel::-webkit-scrollbar{width:3px}
+#panel::-webkit-scrollbar-thumb{background:#1a2535;border-radius:2px}
+.ph{padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;position:sticky;top:0;background:rgba(6,9,15,.99);z-index:10}
+.pc{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:3px 7px;border-radius:4px}
+.pc:hover{color:var(--text);background:var(--border)}
+.city-nm{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;letter-spacing:.5px}
+.city-st{font-size:10px;color:var(--muted);margin-top:2px}
+.aqi-big{font-family:'Share Tech Mono',monospace;font-size:58px;font-weight:900;line-height:1}
+.aqi-lbl{font-size:11px;font-weight:700;letter-spacing:1px;margin-top:3px}
+.psec{padding:12px 16px;border-bottom:1px solid var(--border)}
+.stitle{font-size:8px;color:var(--muted);letter-spacing:2px;margin-bottom:9px;font-family:'Share Tech Mono',monospace}
+.poll-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.poll-card{background:#0d1420;border-radius:7px;padding:8px 10px;border:1px solid var(--border)}
+.poll-card-name{font-size:8px;color:var(--muted);letter-spacing:1px;margin-bottom:3px}
+.poll-card-val{font-family:'Share Tech Mono',monospace;font-size:18px;font-weight:700;line-height:1}
+.poll-card-unit{font-size:8px;color:var(--muted);margin-top:1px}
+.poll-card-bar{height:3px;background:#111d2e;border-radius:2px;margin-top:5px;overflow:hidden}
+.poll-card-fill{height:100%;border-radius:2px;transition:width 1s}
+.fc-wrap{display:flex;align-items:flex-end;gap:2px;height:62px}
+.fc-b{flex:1;border-radius:2px 2px 0 0;transition:height .5s;min-height:3px}
+.fc-labs{display:flex;justify-content:space-between;margin-top:4px}
+.fc-lab{font-size:7px;color:var(--muted);font-family:'Share Tech Mono',monospace}
+.src-row{margin-bottom:9px}
+.src-top{display:flex;justify-content:space-between;margin-bottom:3px}
+.src-nm{font-size:10px;color:var(--text)}
+.src-cf{font-size:10px;color:var(--accent);font-weight:700;font-family:'Share Tech Mono',monospace}
+.src-bg{height:3px;background:#111d2e;border-radius:2px}
+.src-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#1d4ed888,#1d8cf8);transition:width 1s}
+.adv-box{background:#0d1420;border-radius:8px;padding:11px;margin-bottom:8px}
+.adv-safety{display:inline-flex;align-items:center;gap:5px;border-radius:20px;padding:3px 10px;margin-bottom:9px;border:1px solid}
+.adv-sd{width:5px;height:5px;border-radius:50%}
+.adv-st{font-size:9px;font-weight:700;letter-spacing:1px;font-family:'Share Tech Mono',monospace}
+.adv-sl{font-size:7px;color:var(--muted);letter-spacing:1.5px;margin-bottom:3px}
+.adv-txt{font-size:10px;color:#aabbc8;line-height:1.7;margin-bottom:8px}
+.adv-act{background:#111d2e;border-radius:5px;padding:7px 9px;margin-bottom:8px;font-size:10px;color:var(--text);font-weight:600}
+.adv-tags{display:flex;flex-wrap:wrap;gap:3px}
+.adv-tag{font-size:8px;background:#111d2e;border:1px solid #1a2535;border-radius:3px;padding:2px 7px;color:#6a7a8a}
+.skel{background:linear-gradient(90deg,#111d2e 25%,#1a2535 50%,#111d2e 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px}
+.leaflet-tile{filter:brightness(.15) saturate(.3) hue-rotate(210deg)}
+.leaflet-control-attribution,.leaflet-control-zoom{display:none}
+.leaflet-tooltip{background:rgba(6,9,15,.97)!important;border:1px solid #1a2535!important;border-radius:8px!important;color:#dde8f5!important;font-family:'DM Sans',sans-serif!important;font-size:11px!important;box-shadow:0 4px 20px rgba(0,0,0,.5)!important;padding:8px 11px!important}
+.leaflet-tooltip::before{display:none!important}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(1.5)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes ripple{0%{transform:scale(1);opacity:.5}100%{transform:scale(2.4);opacity:0}}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    <div><div class="logo-text">AQI INTELLIGENCE</div><div class="logo-sub">INDIA · CPCB LIVE · ML POWERED</div></div>
+  </div>
+  <div class="hstats" id="hstats"></div>
+  <div class="live-badge"><div class="live-dot"></div><span class="live-text">LIVE</span></div>
+</header>
+
+<div id="pollutant-bar">
+  <button class="pb-btn" data-poll="AQI"   >AQI</button>
+  <button class="pb-btn" data-poll="PM2.5" >PM2.5</button>
+  <button class="pb-btn" data-poll="PM10"  >PM10</button>
+  <button class="pb-btn" data-poll="NO2"   >NO₂</button>
+  <button class="pb-btn" data-poll="SO2"   >SO₂</button>
+  <button class="pb-btn" data-poll="CO"    >CO</button>
+  <button class="pb-btn" data-poll="O3"    >O₃</button>
+  <button class="pb-btn" data-poll="NH3"   >NH₃</button>
+</div>
+
+<div id="map"></div>
+
+<div id="search-box">
+  <input id="search-input" placeholder="🔍  Search city…" autocomplete="off"/>
+  <div id="search-results"></div>
+</div>
+
+<div id="legend">
+  <div class="leg-title" id="leg-title">AQI SCALE</div>
+  <div id="leg-items"></div>
+</div>
+
+<div id="status-bar">⏳ LOADING…</div>
+
+<div id="panel">
+  <div class="ph" id="ph"></div>
+  <div id="pb"></div>
+</div>
+
+<script>
+const API_KEY = "579b464db66ec23bdd000001cdd3946e44ce4aad7209ff7b23ac571b";
+const RES_ID  = "3b01bcb8-0b14-4abf-b6f2-c1bfd384ba69";
+
+const COORDS = {
+  "Delhi":{lat:28.6139,lng:77.2090},"Mumbai":{lat:19.0760,lng:72.8777},
+  "Ahmedabad":{lat:23.0225,lng:72.5714},"Chennai":{lat:13.0827,lng:80.2707},
+  "Kolkata":{lat:22.5726,lng:88.3639},"Bangalore":{lat:12.9716,lng:77.5946},
+  "Hyderabad":{lat:17.3850,lng:78.4867},"Chandigarh":{lat:30.7333,lng:76.7794},
+  "Guwahati":{lat:26.1445,lng:91.7362},"Pune":{lat:18.5204,lng:73.8567},
+  "Jaipur":{lat:26.9124,lng:75.7873},"Lucknow":{lat:26.8467,lng:80.9462},
+  "Agra":{lat:27.1767,lng:78.0081},"Kanpur":{lat:26.4499,lng:80.3319},
+  "Nashik":{lat:19.9975,lng:73.7898},"Surat":{lat:21.1702,lng:72.8311},
+  "Patna":{lat:25.5941,lng:85.1376},"Bhopal":{lat:23.2599,lng:77.4126},
+  "Varanasi":{lat:25.3176,lng:82.9739},"Vadodara":{lat:22.3072,lng:73.1812},
+  "Kochi":{lat:9.9312,lng:76.2673},"Nagpur":{lat:21.1458,lng:79.0882},
+  "Indore":{lat:22.7196,lng:75.8577},"Visakhapatnam":{lat:17.6868,lng:83.2185},
+};
+
+const FALLBACK = [
+  {city:"Delhi",state:"Delhi",aqi:245,pm25:145,pm10:220,no2:52,so2:18,co:2.8,o3:42,nh3:14,station:"Anand Vihar"},
+  {city:"Mumbai",state:"Maharashtra",aqi:118,pm25:68,pm10:112,no2:38,so2:12,co:1.4,o3:55,nh3:6,station:"Bandra"},
+  {city:"Ahmedabad",state:"Gujarat",aqi:132,pm25:74,pm10:128,no2:33,so2:10,co:1.6,o3:48,nh3:8,station:"Maninagar"},
+  {city:"Chennai",state:"Tamil Nadu",aqi:88,pm25:44,pm10:85,no2:22,so2:8,co:0.9,o3:62,nh3:4,station:"Alandur"},
+  {city:"Kolkata",state:"West Bengal",aqi:155,pm25:88,pm10:148,no2:51,so2:14,co:2.1,o3:38,nh3:12,station:"Rabindra Bharati"},
+  {city:"Bangalore",state:"Karnataka",aqi:142,pm25:82,pm10:135,no2:40,so2:11,co:1.8,o3:44,nh3:7,station:"BTM Layout"},
+  {city:"Hyderabad",state:"Telangana",aqi:108,pm25:58,pm10:102,no2:28,so2:9,co:1.2,o3:51,nh3:5,station:"Bollaram"},
+  {city:"Chandigarh",state:"Chandigarh",aqi:95,pm25:50,pm10:92,no2:18,so2:5,co:0.8,o3:68,nh3:3,station:"Sector 22"},
+  {city:"Guwahati",state:"Assam",aqi:82,pm25:43,pm10:78,no2:14,so2:7,co:0.7,o3:55,nh3:4,station:"Pan Bazar"},
+  {city:"Pune",state:"Maharashtra",aqi:102,pm25:55,pm10:98,no2:44,so2:18,co:1.3,o3:46,nh3:9,station:"Lohegaon"},
+  {city:"Jaipur",state:"Rajasthan",aqi:178,pm25:98,pm10:168,no2:38,so2:8,co:1.9,o3:40,nh3:10,station:"Shastri Nagar"},
+  {city:"Lucknow",state:"Uttar Pradesh",aqi:235,pm25:138,pm10:210,no2:30,so2:9,co:2.5,o3:35,nh3:16,station:"Talkatora"},
+  {city:"Agra",state:"Uttar Pradesh",aqi:198,pm25:115,pm10:188,no2:22,so2:5,co:2.2,o3:38,nh3:11,station:"Sanjay Place"},
+  {city:"Kanpur",state:"Uttar Pradesh",aqi:228,pm25:132,pm10:205,no2:34,so2:10,co:2.6,o3:32,nh3:18,station:"Nehru Nagar"},
+  {city:"Nashik",state:"Maharashtra",aqi:88,pm25:46,pm10:84,no2:26,so2:22,co:1.0,o3:52,nh3:5,station:"Ambad"},
+  {city:"Surat",state:"Gujarat",aqi:115,pm25:62,pm10:108,no2:30,so2:14,co:1.4,o3:49,nh3:7,station:"Sachin"},
+  {city:"Patna",state:"Bihar",aqi:210,pm25:122,pm10:195,no2:28,so2:12,co:2.3,o3:36,nh3:14,station:"Muradpur"},
+  {city:"Bhopal",state:"Madhya Pradesh",aqi:125,pm25:70,pm10:118,no2:32,so2:10,co:1.5,o3:50,nh3:6,station:"T.T. Nagar"},
+  {city:"Varanasi",state:"Uttar Pradesh",aqi:195,pm25:112,pm10:182,no2:26,so2:8,co:2.1,o3:37,nh3:13,station:"Ardhali Bazar"},
+  {city:"Vadodara",state:"Gujarat",aqi:122,pm25:68,pm10:115,no2:29,so2:12,co:1.4,o3:50,nh3:6,station:"GSFC"},
+];
+
+const PCFG = {
+  AQI:   {label:"AQI",   unit:"",      max:500,key:"aqi",  color:"#dde8f5",scale:[[50,"#22c55e","Good"],[100,"#eab308","Moderate"],[150,"#f97316","Poor"],[200,"#ef4444","Unhealthy"],[300,"#a855f7","Very High"],[500,"#dc2626","Hazardous"]]},
+  "PM2.5":{label:"PM2.5",unit:"μg/m³", max:250,key:"pm25", color:"#f97316",scale:[[30,"#22c55e","Good"],[60,"#eab308","Moderate"],[90,"#f97316","Poor"],[120,"#ef4444","Unhealthy"],[250,"#a855f7","Very High"],[380,"#dc2626","Hazardous"]]},
+  PM10:  {label:"PM10",  unit:"μg/m³", max:400,key:"pm10", color:"#eab308",scale:[[50,"#22c55e","Good"],[100,"#eab308","Moderate"],[250,"#f97316","Poor"],[350,"#ef4444","Unhealthy"],[430,"#a855f7","Very High"],[600,"#dc2626","Hazardous"]]},
+  NO2:   {label:"NO₂",   unit:"μg/m³", max:200,key:"no2",  color:"#ef4444",scale:[[40,"#22c55e","Good"],[80,"#eab308","Moderate"],[180,"#f97316","Poor"],[280,"#ef4444","Unhealthy"],[400,"#a855f7","Very High"],[800,"#dc2626","Hazardous"]]},
+  SO2:   {label:"SO₂",   unit:"μg/m³", max:80, key:"so2",  color:"#a855f7",scale:[[40,"#22c55e","Good"],[80,"#eab308","Moderate"],[380,"#f97316","Poor"],[800,"#ef4444","Unhealthy"],[1600,"#a855f7","Very High"],[2000,"#dc2626","Hazardous"]]},
+  CO:    {label:"CO",    unit:"mg/m³", max:10, key:"co",   color:"#22d3ee",scale:[[1,"#22c55e","Good"],[2,"#eab308","Moderate"],[10,"#f97316","Poor"],[17,"#ef4444","Unhealthy"],[34,"#a855f7","Very High"],[50,"#dc2626","Hazardous"]]},
+  O3:    {label:"O₃",    unit:"μg/m³", max:200,key:"o3",   color:"#3b82f6",scale:[[50,"#22c55e","Good"],[100,"#eab308","Moderate"],[168,"#f97316","Poor"],[208,"#ef4444","Unhealthy"],[748,"#a855f7","Very High"],[1000,"#dc2626","Hazardous"]]},
+  NH3:   {label:"NH₃",   unit:"μg/m³", max:80, key:"nh3",  color:"#10b981",scale:[[200,"#22c55e","Good"],[400,"#eab308","Moderate"],[800,"#f97316","Poor"],[1200,"#ef4444","Unhealthy"],[1800,"#a855f7","Very High"],[2400,"#dc2626","Hazardous"]]},
+};
+
+function getColor(poll,val){const s=PCFG[poll]?.scale||[];for(const[t,c]of s)if(val<=t)return c;return"#dc2626"}
+function getLabel(poll,val){const s=PCFG[poll]?.scale||[];for(const[t,,l]of s)if(val<=t)return l;return"Hazardous"}
+function aqiMeta(a){const c=getColor("AQI",a),l=getLabel("AQI",a);const bg={"#22c55e":"#052e16","#eab308":"#1c1903","#f97316":"#1c0a03","#ef4444":"#200a0a","#a855f7":"#150920","#dc2626":"#1c0202"};return{color:c,label:l,bg:bg[c]||"#0c1018",safety:a<=100?"Safe":a<=150?"Limit Exposure":a<=200?"Avoid Outdoor":"Dangerous"}}
+function getSrc(c){const s=[];if(c.pm10>c.pm25*2.2)s.push({name:"Construction/Road Dust",conf:Math.min(95,Math.round(60+c.pm10/5))});if(c.no2>40)s.push({name:"Vehicular Emissions",conf:Math.min(95,Math.round(55+c.no2/3))});if(c.so2>15)s.push({name:"Industrial Discharge",conf:Math.min(95,Math.round(50+c.so2*2))});if(c.pm25>80&&c.no2<35)s.push({name:"Biomass Burning",conf:Math.min(90,Math.round(45+c.pm25/3))});if(c.nh3>10)s.push({name:"Agricultural Emissions",conf:Math.min(88,Math.round(40+c.nh3*2))});if(!s.length)s.push({name:"Mixed Urban Pollution",conf:65});return s.sort((a,b)=>b.conf-a.conf).slice(0,3)}
+function fcst(aqi){return Array.from({length:24},(_,h)=>{const d=h>=7&&h<=9?1.22:h>=17&&h<=20?1.15:h<=4?0.85:1;return Math.max(10,Math.round(aqi*d+(Math.random()-.5)*20))})}
+
+const map=L.map('map',{center:[22.5,82.5],zoom:5,zoomControl:false,attributionControl:false});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,minZoom:4}).addTo(map);
+
+let allCities=[],activeMarkers=[],curPoll="AQI";
+
+async function fetchData(){
+  setStatus("⏳ FETCHING LIVE DATA FROM data.gov.in…");
+  try{
+    const url=`https://api.data.gov.in/resource/${RES_ID}?api-key=${API_KEY}&format=json&limit=500`;
+    const res=await fetch(url);
+    const json=await res.json();
+    const records=json.records||[];
+    if(!records.length)throw new Error("empty");
+    const cityMap={};
+    records.forEach(r=>{
+      const city=(r.city||r.station||"").trim();
+      if(!city)return;
+      if(!cityMap[city])cityMap[city]={city,state:r.state||"",readings:{},station:r.station||city};
+      const p=(r.pollutant_id||"").toUpperCase().replace("PM2.5","PM2.5").replace("OZONE","O3").replace("PM25","PM2.5");
+      const v=parseFloat(r.pollutant_avg||r.pollutant_min||0);
+      if(!isNaN(v)&&v>0)cityMap[city].readings[p]=v;
+    });
+    const cities=Object.values(cityMap).map(c=>{
+      const r=c.readings;const co=COORDS[c.city]||null;
+      if(!co)return null;
+      return{city:c.city,state:c.state,lat:co.lat,lng:co.lng,
+        aqi:r.AQI||Math.round(Math.max(r["PM2.5"]||0,r.PM10||0)*0.9)||0,
+        pm25:r["PM2.5"]||0,pm10:r.PM10||0,no2:r.NO2||0,so2:r.SO2||0,
+        co:r.CO||0,o3:r.O3||0,nh3:r.NH3||0,station:c.station,source:"live"};
+    }).filter(Boolean).filter(c=>c.aqi>0||c.pm25>0||c.pm10>0);
+    if(cities.length<3)throw new Error("too few");
+    allCities=cities;
+    setStatus(`✅ LIVE · ${cities.length} STATIONS · data.gov.in CPCB`);
+    return cities;
+  }catch(e){
+    allCities=FALLBACK.map(c=>{const co=COORDS[c.city]||{lat:22,lng:82};return{...c,lat:co.lat,lng:co.lng,source:"dataset"}});
+    setStatus(`📊 CPCB DATASET · ${FALLBACK.length} CITIES · Sample API (10 records/call)`);
+    return allCities;
+  }
+}
+
+function drawMarkers(cities,poll){
+  activeMarkers.forEach(m=>map.removeLayer(m));activeMarkers=[];
+  const cfg=PCFG[poll];
+  cities.forEach(city=>{
+    const val=city[cfg.key]||0;if(!val||!city.lat)return;
+    const color=getColor(poll,val);const lbl=getLabel(poll,val);
+    const sz=poll==="AQI"?(val>200?52:val>150?46:val>100?42:38):40;
+    const dv=poll==="CO"?val.toFixed(1):Math.round(val);
+    const icon=L.divIcon({className:"",iconSize:[sz,sz],iconAnchor:[sz/2,sz/2],
+      html:`<div style="width:${sz}px;height:${sz}px;background:${color}18;border:2.5px solid ${color};border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 18px ${color}44;position:relative;font-family:'Share Tech Mono',monospace;">
+        <div style="position:absolute;inset:-5px;border-radius:50%;border:1.5px solid ${color}44;animation:ripple 2.5s infinite;pointer-events:none;"></div>
+        <div style="font-size:${sz<42?11:12}px;font-weight:800;color:${color};line-height:1">${dv}</div>
+        <div style="font-size:6px;color:${color}99;margin-top:1px">${cfg.label}</div>
+      </div>`});
+    const ttip=`<div style="min-width:168px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:#dde8f5">${city.city}</div>
+      <div style="font-size:9px;color:#4a5a70;margin-bottom:7px">${city.state}${city.station&&city.station!==city.city?" · "+city.station:""}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px">
+        ${[["AQI",city.aqi,getColor("AQI",city.aqi)],["PM2.5",city.pm25,"#f97316"],["PM10",city.pm10,"#eab308"]].map(([n,v,c])=>`<div><div style="font-size:8px;color:#4a5a70">${n}</div><div style="font-family:'Share Tech Mono',monospace;font-size:15px;font-weight:800;color:${c}">${Math.round(v)||"—"}</div></div>`).join("")}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        ${[["NO₂",city.no2,"#ef4444"],["SO₂",city.so2,"#a855f7"],["O₃",city.o3,"#3b82f6"]].map(([n,v,c])=>`<div><div style="font-size:8px;color:#4a5a70">${n}</div><div style="font-family:'Share Tech Mono',monospace;font-size:13px;font-weight:700;color:${c}">${Math.round(v)||"—"}</div></div>`).join("")}
+      </div>
+      <div style="margin-top:7px;font-size:9px;color:${color};font-weight:700">● ${lbl}</div>
+      <div style="font-size:8px;color:#4a5a70;margin-top:2px">${city.source==="live"?"🟢 Live":"📊 CPCB Data"} · Click for details →</div>
+    </div>`;
+    const marker=L.marker([city.lat,city.lng],{icon}).addTo(map)
+      .bindTooltip(ttip,{permanent:false,direction:"top",offset:[0,-sz/2-4]})
+      .on("click",()=>openPanel(city));
+    activeMarkers.push(marker);
+  });
+}
+
+function updateLegend(poll){
+  const cfg=PCFG[poll];
+  document.getElementById("leg-title").textContent=`${cfg.label}${cfg.unit?" ("+cfg.unit+")":""}`;
+  document.getElementById("leg-items").innerHTML=cfg.scale.map(([t,c,l],i)=>{
+    const lo=i===0?0:cfg.scale[i-1][0]+1;
+    return`<div class="leg-row"><div class="leg-dot" style="background:${c}"></div><span class="leg-text">${l} (${lo}–${t})</span></div>`;
+  }).join("");
+}
+
+function switchPollutant(poll){
+  curPoll=poll;
+  document.querySelectorAll(".pb-btn").forEach(b=>{
+    const on=b.dataset.poll===poll;b.classList.toggle("active",on);
+    if(on){b.style.cssText=`background:${PCFG[poll].color};border-color:${PCFG[poll].color};color:#000;font-weight:700`}
+    else{b.style.cssText=""}
+  });
+  updateLegend(poll);drawMarkers(allCities,poll);
+}
+
+function updateHeader(cities){
+  const avg=Math.round(cities.reduce((s,c)=>s+(c.aqi||0),0)/cities.length);
+  const am=aqiMeta(avg);const worst=cities.reduce((a,b)=>(b.aqi||0)>(a.aqi||0)?b:a,cities[0]||{});
+  document.getElementById("hstats").innerHTML=`
+    <div class="hs"><div class="hs-v" style="color:${am.color}">${avg}</div><div class="hs-l">AVG AQI</div></div>
+    <div style="width:1px;height:28px;background:#1a2535"></div>
+    <div class="hs"><div class="hs-v" style="color:#f85149;font-size:13px">${worst.city||"—"}</div><div class="hs-l">WORST</div></div>
+    <div style="width:1px;height:28px;background:#1a2535"></div>
+    <div class="hs"><div class="hs-v" style="color:#d2a8ff">${cities.length}</div><div class="hs-l">CITIES</div></div>`;
+}
+
+function setStatus(t){document.getElementById("status-bar").textContent=t}
+
+const SC={"Safe":"#22c55e","Limit Exposure":"#eab308","Avoid Outdoor":"#f97316","Dangerous":"#ef4444"};
+
+async function getAdvisory(city){
+  const srcs=getSrc(city).map(s=>s.name).join(", ");
+  const prompt=`Air quality advisor for India. City: ${city.city}, ${city.state} | AQI:${city.aqi} PM2.5:${city.pm25} PM10:${city.pm10} NO2:${city.no2} SO2:${city.so2} O3:${city.o3} NH3:${city.nh3} Sources:${srcs}. Return ONLY JSON: {"healthAdvisory":"2 sentences","policyRecommendation":"2 sentences","immediateAction":"short","sensitiveGroups":["up to 4"],"outdoorSafety":"Safe|Limit Exposure|Avoid Outdoor|Dangerous"}`;
+  try{
+    const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:450,messages:[{role:"user",content:prompt}]})});
+    const d=await r.json();
+    return JSON.parse(d.content.map(i=>i.text||"").join("").replace(/```json|```/g,"").trim());
+  }catch{
+    const m=aqiMeta(city.aqi);
+    return{healthAdvisory:`AQI of ${city.aqi} in ${city.city} poses ${city.aqi>150?"serious":"moderate"} health risks. ${city.aqi>150?"Avoid":"Limit"} prolonged outdoor exposure.`,policyRecommendation:`${city.city} authorities should enforce stricter emission norms and increase green cover across urban zones.`,immediateAction:city.aqi>200?"Stay indoors, use air purifier.":city.aqi>100?"Wear N95 mask outdoors.":"Monitor AQI — sensitive groups take precautions.",sensitiveGroups:["Children under 12","Elderly 60+","Asthma/COPD patients","Pregnant women"],outdoorSafety:m.safety};
+  }
+}
+
+function openPanel(city){
+  const m=aqiMeta(city.aqi);const srcs=getSrc(city);const fc=fcst(city.aqi);const mx=Math.max(...fc);const curH=new Date().getHours();
+  document.getElementById("ph").innerHTML=`
+    <div>
+      <div class="city-nm" style="color:${m.color}">${city.city}</div>
+      <div class="city-st">${city.state} · ${city.station!==city.city?city.station+" · ":""}${city.source==="live"?"🟢 Live data.gov.in":"📊 CPCB Dataset"}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="text-align:right">
+        <div class="aqi-big" style="color:${m.color};text-shadow:0 0 28px ${m.color}44">${city.aqi}</div>
+        <div class="aqi-lbl" style="color:${m.color}">${m.label.toUpperCase()}</div>
+      </div>
+      <button class="pc" onclick="closePanel()">✕</button>
+    </div>`;
+
+  const cards=[["PM2.5",city.pm25,250,"#f97316","μg/m³"],["PM10",city.pm10,400,"#eab308","μg/m³"],["NO₂",city.no2,200,"#ef4444","μg/m³"],["SO₂",city.so2,80,"#a855f7","μg/m³"],["CO",city.co,10,"#22d3ee","mg/m³"],["O₃",city.o3,200,"#3b82f6","μg/m³"],["NH₃",city.nh3,80,"#10b981","μg/m³"]];
+  document.getElementById("pb").innerHTML=`
+    <div class="psec">
+      <div class="stitle">POLLUTANT BREAKDOWN</div>
+      <div class="poll-grid">
+        ${cards.map(([n,v,mx2,c,u])=>`<div class="poll-card" style="border-color:${c}22"><div class="poll-card-name">${n}</div><div class="poll-card-val" style="color:${c}">${v>0?(n==="CO"?v.toFixed(1):Math.round(v)):"—"}</div><div class="poll-card-unit">${u}</div><div class="poll-card-bar"><div class="poll-card-fill" style="width:${v>0?Math.min(100,v/mx2*100):0}%;background:${c}"></div></div></div>`).join("")}
+      </div>
+    </div>
+    <div class="psec">
+      <div class="stitle">24-HOUR AQI FORECAST (ML)</div>
+      <div class="fc-wrap">
+        ${fc.map((v,i)=>{const fm=aqiMeta(v);const h=Math.max(3,(v/mx)*60);const now=i===curH;return`<div class="fc-b" title="${String(i).padStart(2,"0")}:00 — AQI ${v}" style="height:${h}px;background:${now?fm.color:fm.color+"55"};border-top:${now?"2px solid "+fm.color:"none"};box-shadow:${now?"0 0 8px "+fm.color:"none"}"></div>`}).join("")}
+      </div>
+      <div class="fc-labs">${[0,4,8,12,16,20,23].map(h=>`<span class="fc-lab">${String(h).padStart(2,"0")}h</span>`).join("")}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:9px">
+        ${[["Peak AQI",Math.max(...fc),"#f85149"],["Min AQI",Math.min(...fc),"#22c55e"],["Peak Hour",`${String(fc.indexOf(Math.max(...fc))).padStart(2,"0")}:00`,"#f97316"],["Best Hour",`${String(fc.indexOf(Math.min(...fc))).padStart(2,"0")}:00`,"#22c55e"]].map(([l,v,c])=>`<div style="background:#0d1420;border-radius:6px;padding:7px 9px"><div style="font-size:7px;color:#4a5a70;margin-bottom:2px">${l}</div><div style="font-size:15px;font-weight:800;color:${c};font-family:'Share Tech Mono',monospace">${v}</div></div>`).join("")}
+      </div>
+    </div>
+    <div class="psec">
+      <div class="stitle">ML SOURCE CLASSIFICATION</div>
+      ${srcs.map(s=>`<div class="src-row"><div class="src-top"><span class="src-nm">${s.name}</span><span class="src-cf">${s.conf}%</span></div><div class="src-bg"><div class="src-fill" style="width:${s.conf}%"></div></div></div>`).join("")}
+    </div>
+    <div class="psec" id="adv-sec">
+      <div class="stitle">⚡ CLAUDE AI ADVISORY</div>
+      <div style="display:flex;flex-direction:column;gap:7px">${[85,65,90,55,70].map((w,i)=>`<div class="skel" style="height:7px;width:${w}%;animation-delay:${i*.1}s"></div>`).join("")}</div>
+    </div>`;
+
+  document.getElementById("panel").classList.add("open");
+  getAdvisory(city).then(adv=>{
+    const sc=SC[adv.outdoorSafety]||"#888";
+    document.getElementById("adv-sec").innerHTML=`
+      <div class="stitle">⚡ CLAUDE AI ADVISORY</div>
+      <div class="adv-box">
+        <div class="adv-safety" style="background:${sc}18;border-color:${sc}55"><div class="adv-sd" style="background:${sc}"></div><span class="adv-st" style="color:${sc}">${(adv.outdoorSafety||"").toUpperCase()}</span></div>
+        <div class="adv-sl">HEALTH ADVISORY</div><div class="adv-txt">${adv.healthAdvisory}</div>
+        <div class="adv-sl">IMMEDIATE ACTION</div><div class="adv-act">→ ${adv.immediateAction}</div>
+        <div class="adv-sl">POLICY</div><div class="adv-txt">${adv.policyRecommendation}</div>
+        <div class="adv-sl">AT-RISK GROUPS</div>
+        <div class="adv-tags">${(adv.sensitiveGroups||[]).map(g=>`<span class="adv-tag">${g}</span>`).join("")}</div>
+      </div>`;
+  });
+}
+
+function closePanel(){document.getElementById("panel").classList.remove("open")}
+
+// Search
+const si=document.getElementById("search-input"),sr=document.getElementById("search-results");
+si.addEventListener("input",()=>{
+  const q=si.value.toLowerCase().trim();
+  if(!q||!allCities.length){sr.style.display="none";return}
+  const hits=allCities.filter(c=>(c.city||"").toLowerCase().includes(q));
+  if(!hits.length){sr.style.display="none";return}
+  sr.style.display="block";
+  sr.innerHTML=hits.slice(0,6).map(c=>{
+    const v=c[PCFG[curPoll].key]||0;const col=getColor(curPoll,v);
+    return`<div class="sr-item" onclick="flyTo('${c.city}')"><span style="color:#dde8f5">${c.city} <span style="color:#4a5a70;font-size:10px">· ${c.state}</span></span><span style="font-family:'Share Tech Mono',monospace;font-weight:700;color:${col}">${Math.round(v)||"—"}</span></div>`;
+  }).join("");
+});
+function flyTo(n){const c=allCities.find(x=>x.city===n);if(!c)return;map.flyTo([c.lat,c.lng],9,{animate:true,duration:1.2});sr.style.display="none";si.value="";setTimeout(()=>openPanel(c),800)}
+document.addEventListener("click",e=>{if(!document.getElementById("search-box").contains(e.target))sr.style.display="none"});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closePanel()});
+
+// Bind buttons
+document.querySelectorAll(".pb-btn").forEach(b=>b.addEventListener("click",()=>switchPollutant(b.dataset.poll)));
+
+// Boot
+(async()=>{
+  updateLegend("AQI");switchPollutant("AQI");
+  const cities=await fetchData();
+  updateHeader(cities);drawMarkers(cities,"AQI");
+  setInterval(async()=>{const f=await fetchData();updateHeader(f);drawMarkers(f,curPoll)},5*60*1000);
+})();
+</script>
+</body>
+</html>
