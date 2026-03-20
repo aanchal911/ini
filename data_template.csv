@@ -1,0 +1,27 @@
+City,State,Date,AQI,PM2.5,PM10,NO2,SO2,CO,O3,NH3,Station
+Delhi,Delhi,2024-01-01,245,145.0,220.0,52.0,18.0,2.8,42.0,14.0,Anand Vihar
+Mumbai,Maharashtra,2024-01-01,118,68.0,112.0,38.0,12.0,1.4,55.0,6.0,Bandra
+Bangalore,Karnataka,2024-01-01,142,82.0,135.0,40.0,11.0,1.8,44.0,7.0,BTM Layout
+Chennai,Tamil Nadu,2024-01-01,88,44.0,85.0,22.0,8.0,0.9,62.0,4.0,Alandur
+Kolkata,West Bengal,2024-01-01,155,88.0,148.0,51.0,14.0,2.1,38.0,12.0,Rabindra Bharati
+# ---------------------------------------------------------------
+# TEMPLATE FILE — Replace with your actual data
+# ---------------------------------------------------------------
+# Columns:
+#   City       - City name
+#   State      - State name
+#   Date       - YYYY-MM-DD
+#   AQI        - Air Quality Index (0–500)
+#   PM2.5      - Fine particulate matter (μg/m³)
+#   PM10       - Coarse particulate matter (μg/m³)
+#   NO2        - Nitrogen dioxide (μg/m³)
+#   SO2        - Sulphur dioxide (μg/m³)
+#   CO         - Carbon monoxide (mg/m³)
+#   O3         - Ozone (μg/m³)
+#   NH3        - Ammonia (μg/m³)
+#   Station    - Monitoring station name
+#
+# Data sources:
+#   - CPCB India: https://cpcb.nic.in/
+#   - data.gov.in: https://data.gov.in/
+#   - OpenAQ:      https://openaq.org/
